@@ -39,8 +39,9 @@ void AP_Compass_Backend::publish_raw_field(const Vector3f &mag, uint8_t instance
     // EKF and DCM would end up consuming compass data at the full
     // sensor rate. We want them to consume only the filtered fields
     state.last_update_ms = AP_HAL::millis();
-
+#if COMPASS_CAL_ENABLED
     _compass._calibrator[instance].new_sample(mag);
+#endif
 }
 
 void AP_Compass_Backend::correct_field(Vector3f &mag, uint8_t i)
@@ -54,10 +55,15 @@ void AP_Compass_Backend::correct_field(Vector3f &mag, uint8_t i)
     const Vector3f &offsets = state.offset.get();
     const Vector3f &diagonals = state.diagonals.get();
     const Vector3f &offdiagonals = state.offdiagonals.get();
-    const Vector3f &mot = state.motor_compensation.get();
 
     // add in the basic offsets
     mag += offsets;
+
+    // add in scale factor, use a wide sanity check. The calibrator
+    // uses a narrower check.
+    if (_compass.have_scale_factor(i)) {
+        mag *= state.scale_factor;
+    }
 
     // apply eliptical correction
     Matrix3f mat(
@@ -68,6 +74,8 @@ void AP_Compass_Backend::correct_field(Vector3f &mag, uint8_t i)
 
     mag = mat * mag;
 
+#if COMPASS_MOT_ENABLED
+    const Vector3f &mot = state.motor_compensation.get();
     /*
       calculate motor-power based compensation
       note that _motor_offset[] is kept even if compensation is not
@@ -94,6 +102,7 @@ void AP_Compass_Backend::correct_field(Vector3f &mag, uint8_t i)
       on final field outputs, not on the raw outputs
     */
     mag += state.motor_offset;
+#endif // COMPASS_MOT_ENABLED
 }
 
 void AP_Compass_Backend::accumulate_sample(Vector3f &field, uint8_t instance,

@@ -1,3 +1,17 @@
+/*
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /* 
 	Simulator Connector for AirSim
 */
@@ -10,13 +24,14 @@
 
 #include <AP_HAL/AP_HAL.h>
 #include <AP_Logger/AP_Logger.h>
+#include <AP_HAL/utility/replace.h>
 
 extern const AP_HAL::HAL& hal;
 
 using namespace SITL;
 
-AirSim::AirSim(const char *home_str, const char *frame_str) :
-	Aircraft(home_str, frame_str),
+AirSim::AirSim(const char *frame_str) :
+	Aircraft(frame_str),
 	sock(true)
 {
 	printf("Starting SITL Airsim\n");
@@ -58,9 +73,9 @@ void AirSim::send_servos(const struct sitl_input &input)
 	if (send_ret != sizeof(pkt)) {
 		if (send_ret <= 0) {
 			printf("Unable to send servo output to %s:%u - Error: %s, Return value: %ld\n",
-					 airsim_ip, airsim_control_port, strerror(errno), send_ret);
+                   airsim_ip, airsim_control_port, strerror(errno), (long)send_ret);
 		} else {
-			printf("Sent %ld bytes instead of %ld bytes\n", send_ret, sizeof(pkt));
+			printf("Sent %ld bytes instead of %lu bytes\n", (long)send_ret, (unsigned long)sizeof(pkt));
 		}
 	}
 }
@@ -115,6 +130,82 @@ bool AirSim::parse_sensors(const char *json)
                 }
                 break;
             }
+
+            case DATA_VECTOR3F_ARRAY: {
+                // - array of floats that represent [x,y,z] coordinate for each point hit within the range
+                //       x0, y0, z0, x1, y1, z1, ..., xn, yn, zn
+                // example: [23.1,0.677024,1.4784,-8.97607135772705,-8.976069450378418,-8.642673492431641e-07,]
+                if (*p++ != '[') {
+                    return false;
+                }
+                uint16_t n = 0;
+                struct vector3f_array *v = (struct vector3f_array *)key.ptr;
+                while (true) {
+                    if (n >= v->length) {
+                        Vector3f *d = (Vector3f *)realloc(v->data, sizeof(Vector3f)*(n+1));
+                        if (d == nullptr) {
+                            return false;
+                        }
+                        v->data = d;
+                        v->length = n+1;
+                    }
+                    if (sscanf(p, "%f,%f,%f,", &v->data[n].x, &v->data[n].y, &v->data[n].z) != 3) {
+                        printf("Failed to parse Vector3f for %s/%s[%u]\n", key.section, key.key, n);
+                        return false;
+                    }
+                    n++;
+                    // Goto 3rd occurence of ,
+                    p = strchr(p,',');
+                    if (!p) {
+                        return false;
+                    }
+                    p++;
+                    p = strchr(p,',');
+                    if (!p) {
+                        return false;
+                    }
+                    p++;
+                    p = strchr(p,',');
+                    if (!p) {
+                        return false;
+                    }
+                    p++;
+                    // Reached end of point cloud
+                    if (p[0] == ']') {
+                        break;
+                    }
+                }
+                v->length = n;
+                break;
+            }
+
+            case DATA_FLOAT_ARRAY: {
+                // example: [18.0, 12.694079399108887]
+                if (*p++ != '[') {
+                    return false;
+                }
+                uint16_t n = 0;
+                struct float_array *v = (struct float_array *)key.ptr;
+                while (true) {
+                    if (n >= v->length) {
+                        float *d = (float *)realloc(v->data, sizeof(float)*(n+1));
+                        if (d == nullptr) {
+                            return false;
+                        }
+                        v->data = d;
+                        v->length = n+1;
+                    }
+                    v->data[n] = atof(p);
+                    n++;
+                    p = strchr(p,',');
+                    if (!p) {
+                        break;
+                    }
+                    p++;
+                }
+                v->length = n;
+                break;
+            }
         }
     }
     return true;
@@ -148,14 +239,10 @@ void AirSim::recv_fdm()
         return;
     }
 
-    bool parse_ok = parse_sensors((const char *)(p1+1));
+    parse_sensors((const char *)(p1+1));
 
     memmove(sensor_buffer, p2, sensor_buffer_len - (p2 - sensor_buffer));
     sensor_buffer_len = sensor_buffer_len - (p2 - sensor_buffer);
-
-    if (!parse_ok) {
-        return;
-    }
 
     accel_body = Vector3f(state.imu.linear_acceleration[0],
                           state.imu.linear_acceleration[1],
@@ -175,8 +262,8 @@ void AirSim::recv_fdm()
 
     dcm.from_euler(state.pose.roll, state.pose.pitch, state.pose.yaw);
 
-    if (last_state.timestamp) {
-        double deltat = state.timestamp - last_state.timestamp;
+    if (last_timestamp) {
+        int deltat = state.timestamp - last_timestamp;
         time_now_us += deltat;
 
         if (deltat > 0 && deltat < 100000) {
@@ -185,6 +272,13 @@ void AirSim::recv_fdm()
             }
             average_frame_time = average_frame_time * 0.98 + deltat * 0.02;
         }
+    }
+
+    scanner.points = state.lidar.points;
+
+    rcin_chan_count = state.rc.rc_channels.length < 8 ? state.rc.rc_channels.length : 8;
+    for (uint8_t i=0; i < rcin_chan_count; i++) {
+        rcin[i] = state.rc.rc_channels.data[i];
     }
 
 #if 0
@@ -218,7 +312,7 @@ void AirSim::recv_fdm()
                        velocity_ef.z);
 #endif
 
-    last_state = state;
+    last_timestamp = state.timestamp;
 }
 
 /*
@@ -228,9 +322,6 @@ void AirSim::update(const struct sitl_input &input)
 {
 	send_servos(input);
     recv_fdm();
-    // Airsim takes approximately 3ms between each message (or 333 Hz)
-    adjust_frame_time(1.0e6/3000);
-    time_advance();
 
     // update magnetic field
     update_mag_field_bf();

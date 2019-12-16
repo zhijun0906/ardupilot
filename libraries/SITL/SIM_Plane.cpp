@@ -23,8 +23,8 @@
 
 using namespace SITL;
 
-Plane::Plane(const char *home_str, const char *frame_str) :
-    Aircraft(home_str, frame_str)
+Plane::Plane(const char *frame_str) :
+    Aircraft(frame_str)
 {
     mass = 2.0f;
 
@@ -268,7 +268,7 @@ void Plane::calculate_forces(const struct sitl_input &input, Vector3f &rot_accel
         float ch1 = aileron;
         float ch2 = elevator;
         aileron  = (ch2-ch1)/2.0f;
-        // the minus does away with the need for RC2_REV=-1
+        // the minus does away with the need for RC2_REVERSED=-1
         elevator = -(ch2+ch1)/2.0f;
 
         // assume no rudder

@@ -28,6 +28,7 @@
 #include "SIM_Gripper_EPM.h"
 #include "SIM_Parachute.h"
 #include "SIM_Precland.h"
+#include "SIM_Buzzer.h"
 #include <Filter/Filter.h>
 
 namespace SITL {
@@ -37,7 +38,10 @@ namespace SITL {
  */
 class Aircraft {
 public:
-    Aircraft(const char *home_str, const char *frame_str);
+    Aircraft(const char *frame_str);
+
+    // called directly after constructor:
+    virtual void set_start_location(const Location &start_loc, const float start_yaw);
 
     /*
       set simulation speedup
@@ -66,6 +70,8 @@ public:
      */
     virtual void update(const struct sitl_input &input) = 0;
 
+    void update_model(const struct sitl_input &input);
+
     /* fill a sitl_fdm structure from the simulator state */
     void fill_fdm(struct sitl_fdm &fdm);
 
@@ -74,9 +80,6 @@ public:
 
     /* return normal distribution random numbers */
     static double rand_normal(double mean, double stddev);
-
-    /* parse a home location string */
-    static bool parse_home(const char *home_str, Location &loc, float &yaw_degrees);
 
     // get frame rate of model in Hz
     float get_rate_hz(void) const { return rate_hz; }
@@ -103,9 +106,15 @@ public:
 
     float gross_mass() const { return mass + external_payload_mass; }
 
+    virtual void set_config(const char* config) {
+        config_ = config;
+    }
+
+
     const Location &get_location() const { return location; }
 
     const Vector3f &get_position() const { return position; }
+    const float &get_range() const { return range; }
 
     void get_attitude(Quaternion &attitude) const {
         attitude.from_rotation_matrix(dcm);
@@ -114,6 +123,7 @@ public:
     const Location &get_home() const { return home; }
     float get_home_yaw() const { return home_yaw; }
 
+    void set_buzzer(Buzzer *_buzzer) { buzzer = _buzzer; }
     void set_sprayer(Sprayer *_sprayer) { sprayer = _sprayer; }
     void set_parachute(Parachute *_parachute) { parachute = _parachute; }
     void set_gripper_servo(Gripper_Servo *_gripper) { gripper = _gripper; }
@@ -123,6 +133,7 @@ public:
 protected:
     SITL *sitl;
     Location home;
+    bool home_is_set;
     Location location;
 
     float ground_level;
@@ -178,6 +189,7 @@ protected:
     const char *frame;
     bool use_time_sync = true;
     float last_speedup = -1.0f;
+    const char *config_ = "";
 
     // allow for AHRS_ORIENTATION
     AP_Int8 *ahrs_orientation;
@@ -263,6 +275,7 @@ private:
 
     LowPassFilterFloat servo_filter[4];
 
+    Buzzer *buzzer;
     Sprayer *sprayer;
     Gripper_Servo *gripper;
     Gripper_EPM *gripper_epm;

@@ -1,6 +1,9 @@
 // auto generated bindings, don't manually edit
 #include "lua_generated_bindings.h"
 #include "lua_boxed_numerics.h"
+#include <SRV_Channel/SRV_Channel.h>
+#include <AP_SerialLED/AP_SerialLED.h>
+#include <AP_Vehicle/AP_Vehicle.h>
 #include <GCS_MAVLink/GCS.h>
 #include <AP_Relay/AP_Relay.h>
 #include <AP_Terrain/AP_Terrain.h>
@@ -9,8 +12,15 @@
 #include <AP_Math/AP_Math.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_BattMonitor/AP_BattMonitor.h>
+#include <AP_Arming/AP_Arming.h>
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Common/Location.h>
+
+
+#if !defined(AP_TERRAIN_AVAILABLE) || (AP_TERRAIN_AVAILABLE != 1)
+  #error Scripting requires terrain to be available
+
+#endif // !defined(AP_TERRAIN_AVAILABLE) || (AP_TERRAIN_AVAILABLE != 1)
 
 
 static int binding_argcheck(lua_State *L, int expected_arg_count) {
@@ -261,35 +271,34 @@ static int Location_lat(lua_State *L) {
 static int Vector2f_is_zero(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->is_zero(
-        );
+    const bool data = ud->is_zero();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector2f_is_inf(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->is_inf(
-        );
+    const bool data = ud->is_inf();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector2f_is_nan(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->is_nan(
-        );
+    const bool data = ud->is_nan();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector2f_normalize(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    ud->normalize(
-        );
+    ud->normalize();
 
     return 0;
 }
@@ -297,8 +306,7 @@ static int Vector2f_normalize(lua_State *L) {
 static int Vector2f_length(lua_State *L) {
     binding_argcheck(L, 1);
     Vector2f * ud = check_Vector2f(L, 1);
-    const float data = ud->length(
-        );
+    const float data = ud->length();
 
     lua_pushnumber(L, data);
     return 1;
@@ -325,35 +333,34 @@ static int Vector2f___sub(lua_State *L) {
 static int Vector3f_is_zero(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->is_zero(
-        );
+    const bool data = ud->is_zero();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector3f_is_inf(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->is_inf(
-        );
+    const bool data = ud->is_inf();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector3f_is_nan(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->is_nan(
-        );
+    const bool data = ud->is_nan();
 
-    return 0;
+    lua_pushboolean(L, data);
+    return 1;
 }
 
 static int Vector3f_normalize(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    ud->normalize(
-        );
+    ud->normalize();
 
     return 0;
 }
@@ -361,8 +368,7 @@ static int Vector3f_normalize(lua_State *L) {
 static int Vector3f_length(lua_State *L) {
     binding_argcheck(L, 1);
     Vector3f * ud = check_Vector3f(L, 1);
-    const float data = ud->length(
-        );
+    const float data = ud->length();
 
     lua_pushnumber(L, data);
     return 1;
@@ -383,6 +389,41 @@ static int Vector3f___sub(lua_State *L) {
     Vector3f *ud2 = check_Vector3f(L, 2);
     new_Vector3f(L);
     *check_Vector3f(L, -1) = *ud - *ud2;;
+    return 1;
+}
+
+static int Location_get_distance_NE(lua_State *L) {
+    binding_argcheck(L, 2);
+    Location * ud = check_Location(L, 1);
+    Location & data_2 = *check_Location(L, 2);
+    const Vector2f &data = ud->get_distance_NE(
+            data_2);
+
+    new_Vector2f(L);
+    *check_Vector2f(L, -1) = data;
+    return 1;
+}
+
+static int Location_get_distance_NED(lua_State *L) {
+    binding_argcheck(L, 2);
+    Location * ud = check_Location(L, 1);
+    Location & data_2 = *check_Location(L, 2);
+    const Vector3f &data = ud->get_distance_NED(
+            data_2);
+
+    new_Vector3f(L);
+    *check_Vector3f(L, -1) = data;
+    return 1;
+}
+
+static int Location_get_bearing(lua_State *L) {
+    binding_argcheck(L, 2);
+    Location * ud = check_Location(L, 1);
+    Location & data_2 = *check_Location(L, 2);
+    const float data = ud->get_bearing(
+            data_2);
+
+    lua_pushnumber(L, data);
     return 1;
 }
 
@@ -463,11 +504,145 @@ const luaL_Reg Location_meta[] = {
     {"relative_alt", Location_relative_alt},
     {"lng", Location_lng},
     {"lat", Location_lat},
+    {"get_distance_NE", Location_get_distance_NE},
+    {"get_distance_NED", Location_get_distance_NED},
+    {"get_bearing", Location_get_bearing},
     {"get_vector_from_origin_NEU", Location_get_vector_from_origin_NEU},
     {"offset", Location_offset},
     {"get_distance", Location_get_distance},
     {NULL, NULL}
 };
+
+static int SRV_Channels_find_channel(lua_State *L) {
+    SRV_Channels * ud = SRV_Channels::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "SRV_Channels not supported on this firmware");
+    }
+
+    binding_argcheck(L, 2);
+    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
+    luaL_argcheck(L, ((raw_data_2 >= static_cast<int32_t>(SRV_Channel::k_none)) && (raw_data_2 <= static_cast<int32_t>(SRV_Channel::k_nr_aux_servo_functions-1))), 2, "argument out of range");
+    const SRV_Channel::Aux_servo_function_t data_2 = static_cast<SRV_Channel::Aux_servo_function_t>(raw_data_2);
+    uint8_t data_5003 = {};
+    const bool data = ud->find_channel(
+            data_2,
+            data_5003);
+
+    if (data) {
+        lua_pushinteger(L, data_5003);
+    } else {
+        lua_pushnil(L);
+    }
+    return 1;
+}
+
+static int AP_SerialLED_send(lua_State *L) {
+    AP_SerialLED * ud = AP_SerialLED::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "serialLED not supported on this firmware");
+    }
+
+    binding_argcheck(L, 1);
+    ud->send();
+
+    return 0;
+}
+
+static int AP_SerialLED_set_RGB(lua_State *L) {
+    AP_SerialLED * ud = AP_SerialLED::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "serialLED not supported on this firmware");
+    }
+
+    binding_argcheck(L, 6);
+    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
+    luaL_argcheck(L, ((raw_data_2 >= MAX(1, 0)) && (raw_data_2 <= MIN(16, UINT8_MAX))), 2, "argument out of range");
+    const uint8_t data_2 = static_cast<uint8_t>(raw_data_2);
+    const uint32_t raw_data_3 = *check_uint32_t(L, 3);
+    luaL_argcheck(L, ((raw_data_3 >= MAX(0U, 0U)) && (raw_data_3 <= MIN(UINT32_MAX, UINT32_MAX))), 3, "argument out of range");
+    const uint32_t data_3 = static_cast<uint32_t>(raw_data_3);
+    const lua_Integer raw_data_4 = luaL_checkinteger(L, 4);
+    luaL_argcheck(L, ((raw_data_4 >= MAX(0, 0)) && (raw_data_4 <= MIN(UINT8_MAX, UINT8_MAX))), 4, "argument out of range");
+    const uint8_t data_4 = static_cast<uint8_t>(raw_data_4);
+    const lua_Integer raw_data_5 = luaL_checkinteger(L, 5);
+    luaL_argcheck(L, ((raw_data_5 >= MAX(0, 0)) && (raw_data_5 <= MIN(UINT8_MAX, UINT8_MAX))), 5, "argument out of range");
+    const uint8_t data_5 = static_cast<uint8_t>(raw_data_5);
+    const lua_Integer raw_data_6 = luaL_checkinteger(L, 6);
+    luaL_argcheck(L, ((raw_data_6 >= MAX(0, 0)) && (raw_data_6 <= MIN(UINT8_MAX, UINT8_MAX))), 6, "argument out of range");
+    const uint8_t data_6 = static_cast<uint8_t>(raw_data_6);
+    ud->set_RGB(
+            data_2,
+            data_3,
+            data_4,
+            data_5,
+            data_6);
+
+    return 0;
+}
+
+static int AP_SerialLED_set_num_LEDs(lua_State *L) {
+    AP_SerialLED * ud = AP_SerialLED::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "serialLED not supported on this firmware");
+    }
+
+    binding_argcheck(L, 3);
+    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
+    luaL_argcheck(L, ((raw_data_2 >= MAX(1, 0)) && (raw_data_2 <= MIN(16, UINT8_MAX))), 2, "argument out of range");
+    const uint8_t data_2 = static_cast<uint8_t>(raw_data_2);
+    const lua_Integer raw_data_3 = luaL_checkinteger(L, 3);
+    luaL_argcheck(L, ((raw_data_3 >= MAX(0, 0)) && (raw_data_3 <= MIN(32, UINT8_MAX))), 3, "argument out of range");
+    const uint8_t data_3 = static_cast<uint8_t>(raw_data_3);
+    const bool data = ud->set_num_LEDs(
+            data_2,
+            data_3);
+
+    lua_pushboolean(L, data);
+    return 1;
+}
+
+static int AP_Vehicle_set_mode(lua_State *L) {
+    AP_Vehicle * ud = AP_Vehicle::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "vehicle not supported on this firmware");
+    }
+
+    binding_argcheck(L, 2);
+    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
+    luaL_argcheck(L, ((raw_data_2 >= MAX(0, 0)) && (raw_data_2 <= MIN(UINT8_MAX, UINT8_MAX))), 2, "argument out of range");
+    const uint8_t data_2 = static_cast<uint8_t>(raw_data_2);
+    const bool data = ud->set_mode(
+            data_2,
+            ModeReason::SCRIPTING);
+
+    lua_pushboolean(L, data);
+    return 1;
+}
+
+static int GCS_set_message_interval(lua_State *L) {
+    GCS * ud = GCS::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "gcs not supported on this firmware");
+    }
+
+    binding_argcheck(L, 4);
+    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
+    luaL_argcheck(L, ((raw_data_2 >= MAX(0, 0)) && (raw_data_2 <= MIN(MAVLINK_COMM_NUM_BUFFERS, UINT8_MAX))), 2, "argument out of range");
+    const uint8_t data_2 = static_cast<uint8_t>(raw_data_2);
+    const uint32_t raw_data_3 = *check_uint32_t(L, 3);
+    luaL_argcheck(L, ((raw_data_3 >= MAX(0U, 0U)) && (raw_data_3 <= MIN(UINT32_MAX, UINT32_MAX))), 3, "argument out of range");
+    const uint32_t data_3 = static_cast<uint32_t>(raw_data_3);
+    const lua_Integer raw_data_4 = luaL_checkinteger(L, 4);
+    luaL_argcheck(L, ((raw_data_4 >= MAX(-1, INT32_MIN)) && (raw_data_4 <= MIN(INT32_MAX, INT32_MAX))), 4, "argument out of range");
+    const int32_t data_4 = raw_data_4;
+    const MAV_RESULT &data = ud->set_message_interval(
+            data_2,
+            data_3,
+            data_4);
+
+    lua_pushinteger(L, data);
+    return 1;
+}
 
 static int GCS_send_text(lua_State *L) {
     GCS * ud = GCS::get_singleton();
@@ -477,11 +652,12 @@ static int GCS_send_text(lua_State *L) {
 
     binding_argcheck(L, 3);
     const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
-    luaL_argcheck(L, ((raw_data_2 >= MAV_SEVERITY_EMERGENCY) && (raw_data_2 <= MAV_SEVERITY_DEBUG)), 2, "argument out of range");
+    luaL_argcheck(L, ((raw_data_2 >= static_cast<int32_t>(MAV_SEVERITY_EMERGENCY)) && (raw_data_2 <= static_cast<int32_t>(MAV_SEVERITY_DEBUG))), 2, "argument out of range");
     const MAV_SEVERITY data_2 = static_cast<MAV_SEVERITY>(raw_data_2);
     const char * data_3 = luaL_checkstring(L, 3);
     ud->send_text(
             data_2,
+            "%s",
             data_3);
 
     return 0;
@@ -573,31 +749,6 @@ static int AP_Terrain_height_above_terrain(lua_State *L) {
     return 1;
 }
 
-static int AP_Terrain_height_relative_home_equivalent(lua_State *L) {
-    AP_Terrain * ud = AP_Terrain::get_singleton();
-    if (ud == nullptr) {
-        return luaL_argerror(L, 1, "terrain not supported on this firmware");
-    }
-
-    binding_argcheck(L, 3);
-    const float raw_data_2 = luaL_checknumber(L, 2);
-    luaL_argcheck(L, ((raw_data_2 >= MAX(-FLT_MAX, -INFINITY)) && (raw_data_2 <= MIN(FLT_MAX, INFINITY))), 2, "argument out of range");
-    const float data_2 = raw_data_2;
-    float data_5003 = {};
-    const bool data_4 = static_cast<bool>(lua_toboolean(L, 4));
-    const bool data = ud->height_relative_home_equivalent(
-            data_2,
-            data_5003,
-            data_4);
-
-    if (data) {
-        lua_pushnumber(L, data_5003);
-    } else {
-        lua_pushnil(L);
-    }
-    return 1;
-}
-
 static int AP_Terrain_height_terrain_difference_home(lua_State *L) {
     AP_Terrain * ud = AP_Terrain::get_singleton();
     if (ud == nullptr) {
@@ -649,8 +800,7 @@ static int AP_Terrain_status(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->status(
-        );
+    const uint8_t data = ud->status();
 
     lua_pushinteger(L, data);
     return 1;
@@ -663,8 +813,7 @@ static int AP_Terrain_enabled(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const bool data = ud->enabled(
-        );
+    const bool data = ud->enabled();
 
     lua_pushboolean(L, data);
     return 1;
@@ -677,17 +826,44 @@ static int RangeFinder_num_sensors(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->num_sensors(
-        );
+    const uint8_t data = ud->num_sensors();
 
     lua_pushinteger(L, data);
     return 1;
 }
 
+static int AP_Notify_handle_rgb(lua_State *L) {
+    AP_Notify * ud = AP_Notify::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "notify not supported on this firmware");
+    }
+
+    binding_argcheck(L, 5);
+    const lua_Integer raw_data_2 = luaL_checkinteger(L, 2);
+    luaL_argcheck(L, ((raw_data_2 >= MAX(0, 0)) && (raw_data_2 <= MIN(UINT8_MAX, UINT8_MAX))), 2, "argument out of range");
+    const uint8_t data_2 = static_cast<uint8_t>(raw_data_2);
+    const lua_Integer raw_data_3 = luaL_checkinteger(L, 3);
+    luaL_argcheck(L, ((raw_data_3 >= MAX(0, 0)) && (raw_data_3 <= MIN(UINT8_MAX, UINT8_MAX))), 3, "argument out of range");
+    const uint8_t data_3 = static_cast<uint8_t>(raw_data_3);
+    const lua_Integer raw_data_4 = luaL_checkinteger(L, 4);
+    luaL_argcheck(L, ((raw_data_4 >= MAX(0, 0)) && (raw_data_4 <= MIN(UINT8_MAX, UINT8_MAX))), 4, "argument out of range");
+    const uint8_t data_4 = static_cast<uint8_t>(raw_data_4);
+    const lua_Integer raw_data_5 = luaL_checkinteger(L, 5);
+    luaL_argcheck(L, ((raw_data_5 >= MAX(0, 0)) && (raw_data_5 <= MIN(UINT8_MAX, UINT8_MAX))), 5, "argument out of range");
+    const uint8_t data_5 = static_cast<uint8_t>(raw_data_5);
+    ud->handle_rgb(
+            data_2,
+            data_3,
+            data_4,
+            data_5);
+
+    return 0;
+}
+
 static int AP_Notify_play_tune(lua_State *L) {
     AP_Notify * ud = AP_Notify::get_singleton();
     if (ud == nullptr) {
-        return luaL_argerror(L, 1, "AP_Notify not supported on this firmware");
+        return luaL_argerror(L, 1, "notify not supported on this firmware");
     }
 
     binding_argcheck(L, 2);
@@ -705,24 +881,15 @@ static int AP_GPS_first_unconfigured_gps(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->first_unconfigured_gps(
-        );
+    uint8_t data_5002 = {};
+    const bool data = ud->first_unconfigured_gps(
+            data_5002);
 
-    lua_pushinteger(L, data);
-    return 1;
-}
-
-static int AP_GPS_all_configured(lua_State *L) {
-    AP_GPS * ud = AP_GPS::get_singleton();
-    if (ud == nullptr) {
-        return luaL_argerror(L, 1, "gps not supported on this firmware");
+    if (data) {
+        lua_pushinteger(L, data_5002);
+    } else {
+        lua_pushnil(L);
     }
-
-    binding_argcheck(L, 1);
-    const bool data = ud->all_configured(
-        );
-
-    lua_pushboolean(L, data);
     return 1;
 }
 
@@ -1046,8 +1213,7 @@ static int AP_GPS_primary_sensor(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->primary_sensor(
-        );
+    const uint8_t data = ud->primary_sensor();
 
     lua_pushinteger(L, data);
     return 1;
@@ -1060,8 +1226,7 @@ static int AP_GPS_num_sensors(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->num_sensors(
-        );
+    const uint8_t data = ud->num_sensors();
 
     lua_pushinteger(L, data);
     return 1;
@@ -1075,7 +1240,7 @@ static int AP_BattMonitor_get_temperature(lua_State *L) {
 
     binding_argcheck(L, 2);
     float data_5002 = {};
-    const lua_Integer raw_data_3 = luaL_checkinteger(L, 3);
+    const lua_Integer raw_data_3 = luaL_checkinteger(L, 2);
     luaL_argcheck(L, ((raw_data_3 >= MAX(0, 0)) && (raw_data_3 <= MIN(ud->num_instances(), UINT8_MAX))), 3, "argument out of range");
     const uint8_t data_3 = static_cast<uint8_t>(raw_data_3);
     const bool data = ud->get_temperature(
@@ -1114,8 +1279,7 @@ static int AP_BattMonitor_has_failsafed(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const bool data = ud->has_failsafed(
-        );
+    const bool data = ud->has_failsafed();
 
     lua_pushboolean(L, data);
     return 1;
@@ -1163,7 +1327,7 @@ static int AP_BattMonitor_consumed_wh(lua_State *L) {
 
     binding_argcheck(L, 2);
     float data_5002 = {};
-    const lua_Integer raw_data_3 = luaL_checkinteger(L, 3);
+    const lua_Integer raw_data_3 = luaL_checkinteger(L, 2);
     luaL_argcheck(L, ((raw_data_3 >= MAX(0, 0)) && (raw_data_3 <= MIN(ud->num_instances(), UINT8_MAX))), 3, "argument out of range");
     const uint8_t data_3 = static_cast<uint8_t>(raw_data_3);
     const bool data = ud->consumed_wh(
@@ -1186,7 +1350,7 @@ static int AP_BattMonitor_consumed_mah(lua_State *L) {
 
     binding_argcheck(L, 2);
     float data_5002 = {};
-    const lua_Integer raw_data_3 = luaL_checkinteger(L, 3);
+    const lua_Integer raw_data_3 = luaL_checkinteger(L, 2);
     luaL_argcheck(L, ((raw_data_3 >= MAX(0, 0)) && (raw_data_3 <= MIN(ud->num_instances(), UINT8_MAX))), 3, "argument out of range");
     const uint8_t data_3 = static_cast<uint8_t>(raw_data_3);
     const bool data = ud->consumed_mah(
@@ -1209,7 +1373,7 @@ static int AP_BattMonitor_current_amps(lua_State *L) {
 
     binding_argcheck(L, 2);
     float data_5002 = {};
-    const lua_Integer raw_data_3 = luaL_checkinteger(L, 3);
+    const lua_Integer raw_data_3 = luaL_checkinteger(L, 2);
     luaL_argcheck(L, ((raw_data_3 >= MAX(0, 0)) && (raw_data_3 <= MIN(ud->num_instances(), UINT8_MAX))), 3, "argument out of range");
     const uint8_t data_3 = static_cast<uint8_t>(raw_data_3);
     const bool data = ud->current_amps(
@@ -1282,10 +1446,48 @@ static int AP_BattMonitor_num_instances(lua_State *L) {
     }
 
     binding_argcheck(L, 1);
-    const uint8_t data = ud->num_instances(
-        );
+    const uint8_t data = ud->num_instances();
 
     lua_pushinteger(L, data);
+    return 1;
+}
+
+static int AP_Arming_arm(lua_State *L) {
+    AP_Arming * ud = AP_Arming::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "arming not supported on this firmware");
+    }
+
+    binding_argcheck(L, 1);
+    const bool data = ud->arm(            AP_Arming::Method::SCRIPTING);
+
+    lua_pushboolean(L, data);
+    return 1;
+}
+
+static int AP_Arming_is_armed(lua_State *L) {
+    AP_Arming * ud = AP_Arming::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "arming not supported on this firmware");
+    }
+
+    binding_argcheck(L, 1);
+    const bool data = ud->is_armed();
+
+    lua_pushboolean(L, data);
+    return 1;
+}
+
+static int AP_Arming_disarm(lua_State *L) {
+    AP_Arming * ud = AP_Arming::get_singleton();
+    if (ud == nullptr) {
+        return luaL_argerror(L, 1, "arming not supported on this firmware");
+    }
+
+    binding_argcheck(L, 1);
+    const bool data = ud->disarm();
+
+    lua_pushboolean(L, data);
     return 1;
 }
 
@@ -1297,8 +1499,7 @@ static int AP_AHRS_prearm_healthy(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const bool data = ud->prearm_healthy(
-        );
+    const bool data = ud->prearm_healthy();
 
     ud->get_semaphore().give();
     lua_pushboolean(L, data);
@@ -1313,8 +1514,7 @@ static int AP_AHRS_home_is_set(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const bool data = ud->home_is_set(
-        );
+    const bool data = ud->home_is_set();
 
     ud->get_semaphore().give();
     lua_pushboolean(L, data);
@@ -1373,8 +1573,7 @@ static int AP_AHRS_groundspeed_vector(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Vector2f &data = ud->groundspeed_vector(
-        );
+    const Vector2f &data = ud->groundspeed_vector();
 
     ud->get_semaphore().give();
     new_Vector2f(L);
@@ -1390,8 +1589,7 @@ static int AP_AHRS_wind_estimate(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Vector3f &data = ud->wind_estimate(
-        );
+    const Vector3f &data = ud->wind_estimate();
 
     ud->get_semaphore().give();
     new_Vector3f(L);
@@ -1428,8 +1626,7 @@ static int AP_AHRS_get_gyro(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Vector3f &data = ud->get_gyro(
-        );
+    const Vector3f &data = ud->get_gyro();
 
     ud->get_semaphore().give();
     new_Vector3f(L);
@@ -1445,8 +1642,7 @@ static int AP_AHRS_get_home(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const Location &data = ud->get_home(
-        );
+    const Location &data = ud->get_home();
 
     ud->get_semaphore().give();
     new_Location(L);
@@ -1484,8 +1680,7 @@ static int AP_AHRS_get_yaw(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const float data = ud->get_yaw(
-        );
+    const float data = ud->get_yaw();
 
     ud->get_semaphore().give();
     lua_pushnumber(L, data);
@@ -1500,8 +1695,7 @@ static int AP_AHRS_get_pitch(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const float data = ud->get_pitch(
-        );
+    const float data = ud->get_pitch();
 
     ud->get_semaphore().give();
     lua_pushnumber(L, data);
@@ -1516,15 +1710,32 @@ static int AP_AHRS_get_roll(lua_State *L) {
 
     binding_argcheck(L, 1);
     ud->get_semaphore().take_blocking();
-    const float data = ud->get_roll(
-        );
+    const float data = ud->get_roll();
 
     ud->get_semaphore().give();
     lua_pushnumber(L, data);
     return 1;
 }
 
+const luaL_Reg SRV_Channels_meta[] = {
+    {"find_channel", SRV_Channels_find_channel},
+    {NULL, NULL}
+};
+
+const luaL_Reg AP_SerialLED_meta[] = {
+    {"send", AP_SerialLED_send},
+    {"set_RGB", AP_SerialLED_set_RGB},
+    {"set_num_LEDs", AP_SerialLED_set_num_LEDs},
+    {NULL, NULL}
+};
+
+const luaL_Reg AP_Vehicle_meta[] = {
+    {"set_mode", AP_Vehicle_set_mode},
+    {NULL, NULL}
+};
+
 const luaL_Reg GCS_meta[] = {
+    {"set_message_interval", GCS_set_message_interval},
     {"send_text", GCS_send_text},
     {NULL, NULL}
 };
@@ -1539,7 +1750,6 @@ const luaL_Reg AP_Relay_meta[] = {
 
 const luaL_Reg AP_Terrain_meta[] = {
     {"height_above_terrain", AP_Terrain_height_above_terrain},
-    {"height_relative_home_equivalent", AP_Terrain_height_relative_home_equivalent},
     {"height_terrain_difference_home", AP_Terrain_height_terrain_difference_home},
     {"height_amsl", AP_Terrain_height_amsl},
     {"status", AP_Terrain_status},
@@ -1553,17 +1763,13 @@ const luaL_Reg RangeFinder_meta[] = {
 };
 
 const luaL_Reg AP_Notify_meta[] = {
+    {"handle_rgb", AP_Notify_handle_rgb},
     {"play_tune", AP_Notify_play_tune},
-    {NULL, NULL}
-};
-
-const luaL_Reg notify_meta[] = {
     {NULL, NULL}
 };
 
 const luaL_Reg AP_GPS_meta[] = {
     {"first_unconfigured_gps", AP_GPS_first_unconfigured_gps},
-    {"all_configured", AP_GPS_all_configured},
     {"get_antenna_offset", AP_GPS_get_antenna_offset},
     {"have_vertical_velocity", AP_GPS_have_vertical_velocity},
     {"last_message_time_ms", AP_GPS_last_message_time_ms},
@@ -1602,6 +1808,13 @@ const luaL_Reg AP_BattMonitor_meta[] = {
     {NULL, NULL}
 };
 
+const luaL_Reg AP_Arming_meta[] = {
+    {"arm", AP_Arming_arm},
+    {"is_armed", AP_Arming_is_armed},
+    {"disarm", AP_Arming_disarm},
+    {NULL, NULL}
+};
+
 const luaL_Reg AP_AHRS_meta[] = {
     {"prearm_healthy", AP_AHRS_prearm_healthy},
     {"home_is_set", AP_AHRS_home_is_set},
@@ -1619,28 +1832,52 @@ const luaL_Reg AP_AHRS_meta[] = {
     {NULL, NULL}
 };
 
-const struct userdata_fun {
+struct userdata_enum {
     const char *name;
-    const luaL_Reg *reg;
-} userdata_fun[] = {
-    {"Vector2f", Vector2f_meta},
-    {"Vector3f", Vector3f_meta},
-    {"Location", Location_meta},
+    int value;
 };
 
-const struct singleton_fun {
+struct userdata_enum AP_Terrain_enums[] = {
+    {"TerrainStatusOK", AP_Terrain::TerrainStatusOK},
+    {"TerrainStatusUnhealthy", AP_Terrain::TerrainStatusUnhealthy},
+    {"TerrainStatusDisabled", AP_Terrain::TerrainStatusDisabled},
+    {NULL, 0}};
+
+struct userdata_enum AP_GPS_enums[] = {
+    {"GPS_OK_FIX_3D_RTK_FIXED", AP_GPS::GPS_OK_FIX_3D_RTK_FIXED},
+    {"GPS_OK_FIX_3D_RTK_FLOAT", AP_GPS::GPS_OK_FIX_3D_RTK_FLOAT},
+    {"GPS_OK_FIX_3D_DGPS", AP_GPS::GPS_OK_FIX_3D_DGPS},
+    {"GPS_OK_FIX_3D", AP_GPS::GPS_OK_FIX_3D},
+    {"GPS_OK_FIX_2D", AP_GPS::GPS_OK_FIX_2D},
+    {"NO_FIX", AP_GPS::NO_FIX},
+    {"NO_GPS", AP_GPS::NO_GPS},
+    {NULL, 0}};
+
+struct userdata_meta {
     const char *name;
     const luaL_Reg *reg;
-} singleton_fun[] = {
-    {"gcs", GCS_meta},
-    {"relay", AP_Relay_meta},
-    {"terrain", AP_Terrain_meta},
-    {"rangefinder", RangeFinder_meta},
-    {"AP_Notify", AP_Notify_meta},
-    {"notify", notify_meta},
-    {"gps", AP_GPS_meta},
-    {"battery", AP_BattMonitor_meta},
-    {"ahrs", AP_AHRS_meta},
+    const struct userdata_enum *enums;
+};
+
+const struct userdata_meta userdata_fun[] = {
+    {"Vector2f", Vector2f_meta, NULL},
+    {"Vector3f", Vector3f_meta, NULL},
+    {"Location", Location_meta, NULL},
+};
+
+const struct userdata_meta singleton_fun[] = {
+    {"SRV_Channels", SRV_Channels_meta, NULL},
+    {"serialLED", AP_SerialLED_meta, NULL},
+    {"vehicle", AP_Vehicle_meta, NULL},
+    {"gcs", GCS_meta, NULL},
+    {"relay", AP_Relay_meta, NULL},
+    {"terrain", AP_Terrain_meta, AP_Terrain_enums},
+    {"rangefinder", RangeFinder_meta, NULL},
+    {"notify", AP_Notify_meta, NULL},
+    {"gps", AP_GPS_meta, AP_GPS_enums},
+    {"battery", AP_BattMonitor_meta, NULL},
+    {"arming", AP_Arming_meta, NULL},
+    {"ahrs", AP_AHRS_meta, NULL},
 };
 
 void load_generated_bindings(lua_State *L) {
@@ -1662,6 +1899,15 @@ void load_generated_bindings(lua_State *L) {
         lua_pushstring(L, "__index");
         lua_pushvalue(L, -2);
         lua_settable(L, -3);
+        if (singleton_fun[i].enums != nullptr) {
+            int j = 0;
+            while (singleton_fun[i].enums[j].name != NULL) {
+                lua_pushstring(L, singleton_fun[i].enums[j].name);
+                lua_pushinteger(L, singleton_fun[i].enums[j].value);
+                lua_settable(L, -3);
+                j++;
+            }
+        }
         lua_pop(L, 1);
         lua_newuserdata(L, 0);
         luaL_getmetatable(L, singleton_fun[i].name);
@@ -1673,14 +1919,17 @@ void load_generated_bindings(lua_State *L) {
 }
 
 const char *singletons[] = {
+    "SRV_Channels",
+    "serialLED",
+    "vehicle",
     "gcs",
     "relay",
     "terrain",
     "rangefinder",
-    "AP_Notify",
     "notify",
     "gps",
     "battery",
+    "arming",
     "ahrs",
 };
 

@@ -5,7 +5,8 @@
 #include <AP_AHRS/AP_AHRS.h>
 #include <AP_Vehicle/AP_Vehicle.h>
 #include <GCS_MAVLink/GCS.h>
-#include <AP_RangeFinder/RangeFinder_Backend.h>
+#include <AP_RangeFinder/AP_RangeFinder.h>
+#include <AP_RangeFinder/AP_RangeFinder_Backend.h>
 #include <AP_GPS/AP_GPS.h>
 #include <AP_Baro/AP_Baro.h>
 
@@ -28,11 +29,16 @@ void NavEKF2_core::readRangeFinder(void)
 
     // get theoretical correct range when the vehicle is on the ground
     // don't allow range to go below 5cm because this can cause problems with optical flow processing
-    rngOnGnd = MAX(frontend->_rng.ground_clearance_cm_orient(ROTATION_PITCH_270) * 0.01f, 0.05f);
+    const RangeFinder *_rng = AP::rangefinder();
+    if (_rng == nullptr) {
+        return;
+    }
+
+    rngOnGnd = MAX(_rng->ground_clearance_cm_orient(ROTATION_PITCH_270) * 0.01f, 0.05f);
 
     // read range finder at 20Hz
     // TODO better way of knowing if it has new data
-    if ((imuSampleTime_ms - lastRngMeasTime_ms) > 50) {
+    if (_rng && (imuSampleTime_ms - lastRngMeasTime_ms) > 50) {
 
         // reset the timer used to control the measurement rate
         lastRngMeasTime_ms =  imuSampleTime_ms;
@@ -41,11 +47,11 @@ void NavEKF2_core::readRangeFinder(void)
         // use data from two range finders if available
 
         for (uint8_t sensorIndex = 0; sensorIndex <= 1; sensorIndex++) {
-            AP_RangeFinder_Backend *sensor = frontend->_rng.get_backend(sensorIndex);
+            AP_RangeFinder_Backend *sensor = _rng->get_backend(sensorIndex);
             if (sensor == nullptr) {
                 continue;
             }
-            if ((sensor->orientation() == ROTATION_PITCH_270) && (sensor->status() == RangeFinder::RangeFinder_Good)) {
+            if ((sensor->orientation() == ROTATION_PITCH_270) && (sensor->status() == RangeFinder::Status::Good)) {
                 rngMeasIndex[sensorIndex] ++;
                 if (rngMeasIndex[sensorIndex] > 2) {
                     rngMeasIndex[sensorIndex] = 0;
@@ -463,6 +469,11 @@ bool NavEKF2_core::readDeltaVelocity(uint8_t ins_index, Vector3f &dVel, float &d
 // check for new valid GPS data and update stored measurement if available
 void NavEKF2_core::readGpsData()
 {
+    if (frontend->_fusionModeGPS == 3) {
+        // don't read GPS data if GPS usage disabled
+        return;
+    }
+
     // check for new GPS data
     // do not accept data at a faster rate than 14Hz to avoid overflowing the FIFO buffer
     const AP_GPS &gps = AP::gps();
@@ -547,12 +558,17 @@ void NavEKF2_core::readGpsData()
             // Post-alignment checks
             calcGpsGoodForFlight();
 
+            // see if we can get origin from frontend
+            if (!validOrigin && frontend->common_origin_valid) {
+                setOrigin(frontend->common_EKF_origin);
+            }
+
             // Read the GPS location in WGS-84 lat,long,height coordinates
             const struct Location &gpsloc = gps.location();
 
             // Set the EKF origin and magnetic field declination if not previously set  and GPS checks have passed
             if (gpsGoodToAlign && !validOrigin) {
-                setOrigin();
+                setOrigin(gpsloc);
 
                 // set the NE earth magnetic field states using the published declination
                 // and set the corresponding variances and covariances
@@ -567,13 +583,16 @@ void NavEKF2_core::readGpsData()
             }
 
             if (gpsGoodToAlign && !have_table_earth_field) {
-                table_earth_field_ga = AP_Declination::get_earth_field_ga(gpsloc);
-                table_declination = radians(AP_Declination::get_declination(gpsloc.lat*1.0e-7,
-                                                                            gpsloc.lng*1.0e-7));
-                have_table_earth_field = true;
-                if (frontend->_mag_ef_limit > 0) {
-                    // initialise earth field from tables
-                    stateStruct.earth_magfield = table_earth_field_ga;
+                const Compass *compass = _ahrs->get_compass();
+                if (compass && compass->have_scale_factor(magSelectIndex)) {
+                    table_earth_field_ga = AP_Declination::get_earth_field_ga(gpsloc);
+                    table_declination = radians(AP_Declination::get_declination(gpsloc.lat*1.0e-7,
+                                                                                gpsloc.lng*1.0e-7));
+                    have_table_earth_field = true;
+                    if (frontend->_mag_ef_limit > 0) {
+                        // initialise earth field from tables
+                        stateStruct.earth_magfield = table_earth_field_ga;
+                    }
                 }
             }
             
@@ -590,11 +609,10 @@ void NavEKF2_core::readGpsData()
                 gpsNotAvailable = false;
             }
 
-            frontend->logging.log_gps = true;
-
         } else {
             // report GPS fix status
             gpsCheckStatus.bad_fix = true;
+            hal.util->snprintf(prearm_fail_string, sizeof(prearm_fail_string), "Waiting for 3D fix");
         }
     }
 }

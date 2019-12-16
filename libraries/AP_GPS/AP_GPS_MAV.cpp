@@ -55,6 +55,7 @@ void AP_GPS_MAV::handle_msg(const mavlink_message_t &msg)
             bool have_sa     = ((packet.ignore_flags & GPS_INPUT_IGNORE_FLAG_SPEED_ACCURACY) == 0);
             bool have_ha     = ((packet.ignore_flags & GPS_INPUT_IGNORE_FLAG_HORIZONTAL_ACCURACY) == 0);
             bool have_va     = ((packet.ignore_flags & GPS_INPUT_IGNORE_FLAG_VERTICAL_ACCURACY) == 0);
+            bool have_yaw    = (packet.yaw != 0);
 
             state.time_week     = packet.time_week;
             state.time_week_ms  = packet.time_week_ms;
@@ -101,6 +102,25 @@ void AP_GPS_MAV::handle_msg(const mavlink_message_t &msg)
             if (have_va) {
                 state.vertical_accuracy = packet.vert_accuracy;
                 state.have_vertical_accuracy = true;
+            }
+
+            if (have_yaw) {
+                state.gps_yaw = wrap_360(packet.yaw*0.01);
+                state.have_gps_yaw = true;
+            }
+
+            if (packet.fix_type >= 3 && packet.time_week > 0) {
+                /*
+                  use the millisecond timestamp from the GPS_INPUT
+                  packet into jitter correction to get a local
+                  timestamp corrected for transport jitter
+                */
+                if (first_week == 0) {
+                    first_week = packet.time_week;
+                }
+                uint32_t timestamp_ms = (packet.time_week - first_week) * AP_MSEC_PER_WEEK + packet.time_week_ms;
+                uint32_t corrected_ms = jitter.correct_offboard_timestamp_msec(timestamp_ms, AP_HAL::millis());
+                state.uart_timestamp_ms = corrected_ms;
             }
 
             state.num_sats = packet.satellites_visible;

@@ -6,6 +6,8 @@ class GCS_MAVLINK_Sub : public GCS_MAVLINK {
 
 public:
 
+    using GCS_MAVLINK::GCS_MAVLINK;
+
 protected:
 
     uint32_t telem_delay() const override {
@@ -16,7 +18,6 @@ protected:
 
     uint8_t sysid_my_gcs() const override;
 
-    bool set_mode(uint8_t mode) override;
     bool should_zero_rc_outputs_on_reboot() const override { return true; }
 
     MAV_RESULT handle_command_do_set_roi(const Location &roi_loc) override;
@@ -49,7 +50,7 @@ private:
     bool send_info(void);
 
     MAV_MODE base_mode() const override;
-    MAV_STATE system_status() const override;
+    MAV_STATE vehicle_system_status() const override;
 
     int16_t vfr_hud_throttle() const override;
 

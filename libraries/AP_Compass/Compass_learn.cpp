@@ -10,6 +10,8 @@
 
 #include <stdio.h>
 
+#if COMPASS_LEARN_ENABLED
+
 extern const AP_HAL::HAL &hal;
 
 // constructor
@@ -17,6 +19,13 @@ CompassLearn::CompassLearn(Compass &_compass) :
     compass(_compass)
 {
     gcs().send_text(MAV_SEVERITY_INFO, "CompassLearn: Initialised");
+    for (uint8_t i=0; i<compass.get_count(); i++) {
+        if (compass._state[i].use_for_yaw) {
+            // reset scale factors, we can't learn scale factors in
+            // flight
+            compass.set_and_save_scale_factor(i, 0.0);
+        }
+    }
 }
 
 /*
@@ -131,6 +140,7 @@ void CompassLearn::update(void)
             for (uint8_t i=0; i<compass.get_count(); i++) {
                 if (compass._state[i].use_for_yaw) {
                     compass.save_offsets(i);
+                    compass.set_and_save_scale_factor(i, 0.0);
                     compass.set_use_for_yaw(i, true);
                 }
             }
@@ -229,3 +239,6 @@ void CompassLearn::process_sample(const struct sample &s)
     worst_error = worstv;
     best_yaw_deg = wrap_360(degrees(s.attitude.z) + besti * (360/num_sectors));
 }
+
+#endif // COMPASS_LEARN_ENABLED
+
